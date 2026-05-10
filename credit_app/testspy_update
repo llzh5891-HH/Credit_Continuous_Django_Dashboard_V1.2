@@ -1,0 +1,575 @@
+from abc import ABC, abstractmethod
+from datetime import datetime
+
+class BaseTest(ABC):
+    """测试基类"""
+    test_id = None
+    test_name = None
+    category = None
+    severity = None
+    description = None
+    
+    def __init__(self):
+        assert self.test_id, "test_id must be defined"
+        assert self.test_name, "test_name must be defined"
+        assert self.category, "category must be defined"
+        assert self.severity in ['critical', 'high', 'medium', 'low'], "Invalid severity"
+    
+    @abstractmethod
+    def execute(self, data):
+        """执行测试，返回异常列表
+        data 结构: {
+            'relationship': [{}, {}, ...],  # relationship_level_mastertable数据
+            'customer': [{}, {}, ...]       # customer_level_mastertable数据
+        }
+        """
+        pass
+    
+    def create_exception(self, record_id, field_name=None, actual_value=None, expected_value=None, description=None):
+        """创建异常记录"""
+        return {
+            'test_id': self.test_id,
+            'test_name': self.test_name,
+            'category': self.category,
+            'severity': self.severity,
+            'record_id': str(record_id),
+            'field_name': field_name,
+            'actual_value': str(actual_value) if actual_value else None,
+            'expected_value': str(expected_value) if expected_value else None,
+            'description': description or f"Test {self.test_id} failed for record {record_id}",
+            'created_at': datetime.now().isoformat()
+        }
+
+
+# ==================== Credit Origination 测试类 ====================
+
+class CreditOriginationTests:
+    """Credit Origination 测试大类"""
+    
+    class ApplicationAmountThresholdTest(BaseTest):
+        """大额贷款申请检测"""
+        test_id = 'CO-T001'
+        test_name = '大额贷款申请检测'
+        category = 'Credit Origination'
+        severity = 'critical'
+        description = '检测超过阈值的大额贷款申请'
+        
+        def execute(self, data):
+            exceptions = []
+            threshold = 1000000  # 100万阈值
+            
+            # 遍历relationship数据
+            for record in data.get('relationship', []):
+                # 假设CSV中有 'loan_amount' 列
+                loan_amount = record.get('loan_amount', 0)
+                if isinstance(loan_amount, (int, float)) and loan_amount > threshold:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('relationship_id', 'N/A'),
+                        field_name='loan_amount',
+                        actual_value=loan_amount,
+                        expected_value=f'<= {threshold}',
+                        description=f"贷款金额 {loan_amount} 超过阈值 {threshold}"
+                    ))
+            
+            return exceptions
+    
+    class QuickApprovalTest(BaseTest):
+        """快速审批检测"""
+        test_id = 'CO-T002'
+        test_name = '快速审批检测'
+        category = 'Credit Origination'
+        severity = 'high'
+        description = '检测异常快速的审批流程'
+        
+        def execute(self, data):
+            exceptions = []
+            max_days = 1  # 1天内审批视为快速
+            
+            for record in data.get('relationship', []):
+                approval_days = record.get('approval_days', 0)
+                if isinstance(approval_days, (int, float)) and approval_days < max_days:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('relationship_id', 'N/A'),
+                        field_name='approval_days',
+                        actual_value=approval_days,
+                        expected_value=f'>= {max_days}',
+                        description=f"审批时间 {approval_days} 天异常快速"
+                    ))
+            
+            return exceptions
+    
+    class CustomerRiskScoreTest(BaseTest):
+        """客户风险评分检测"""
+        test_id = 'CO-T003'
+        test_name = '客户风险评分检测'
+        category = 'Credit Origination'
+        severity = 'medium'
+        description = '检测高风险客户的贷款申请'
+        
+        def execute(self, data):
+            exceptions = []
+            high_risk_threshold = 70  # 风险评分>70为高风险
+            
+            for record in data.get('customer', []):
+                risk_score = record.get('risk_score', 0)
+                if isinstance(risk_score, (int, float)) and risk_score > high_risk_threshold:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('customer_id', 'N/A'),
+                        field_name='risk_score',
+                        actual_value=risk_score,
+                        expected_value=f'<= {high_risk_threshold}',
+                        description=f"客户风险评分 {risk_score} 超过高风险阈值"
+                    ))
+            
+            return exceptions
+    
+    class DocumentCompletenessTest(BaseTest):
+        """申请文件完整性检测"""
+        test_id = 'CO-T004'
+        test_name = '申请文件完整性检测'
+        category = 'Credit Origination'
+        severity = 'medium'
+        description = '检测申请文件是否完整'
+        
+        def execute(self, data):
+            exceptions = []
+            required_docs = ['id_card_uploaded', 'income_proof_uploaded', 'credit_report_uploaded']
+            
+            for record in data.get('customer', []):
+                missing_docs = []
+                for doc in required_docs:
+                    # 假设字段值为 'Yes'/'No' 或 True/False
+                    if not record.get(doc):
+                        missing_docs.append(doc)
+                
+                if missing_docs:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('customer_id', 'N/A'),
+                        field_name='document_status',
+                        actual_value='Missing: ' + ', '.join(missing_docs),
+                        expected_value='All documents uploaded',
+                        description=f"缺少必需文件: {', '.join(missing_docs)}"
+                    ))
+            
+            return exceptions
+
+
+# ==================== Credit Facility Creation 测试类 ====================
+
+class CreditFacilityCreationTests:
+    """Credit Facility Creation 测试大类"""
+    
+    class FacilityLimitExceedTest(BaseTest):
+        """额度超限检测"""
+        test_id = 'CFC-T001'
+        test_name = '额度超限检测'
+        category = 'Credit Facility Creation'
+        severity = 'critical'
+        description = '检测超过客户授信额度的贷款发放'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data.get('relationship', []):
+                facility_amount = record.get('facility_amount', 0)
+                credit_limit = record.get('credit_limit', 0)
+                
+                if isinstance(facility_amount, (int, float)) and isinstance(credit_limit, (int, float)):
+                    if facility_amount > credit_limit:
+                        exceptions.append(self.create_exception(
+                            record_id=record.get('relationship_id', 'N/A'),
+                            field_name='facility_amount',
+                            actual_value=facility_amount,
+                            expected_value=f'<= {credit_limit}',
+                            description=f"授信额度 {facility_amount} 超过客户限额 {credit_limit}"
+                        ))
+            
+            return exceptions
+    
+    class FacilityTypeValidationTest(BaseTest):
+        """产品类型验证"""
+        test_id = 'CFC-T002'
+        test_name = '产品类型验证'
+        category = 'Credit Facility Creation'
+        severity = 'high'
+        description = '验证贷款产品类型是否合法'
+        
+        def execute(self, data):
+            exceptions = []
+            valid_types = ['Loan', 'Credit Line', 'Guarantee', 'LC', 'BD']
+            
+            for record in data.get('relationship', []):
+                facility_type = record.get('facility_type', '').strip()
+                if facility_type and facility_type not in valid_types:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('relationship_id', 'N/A'),
+                        field_name='facility_type',
+                        actual_value=facility_type,
+                        expected_value=f'One of: {", ".join(valid_types)}',
+                        description=f"无效的产品类型: {facility_type}"
+                    ))
+            
+            return exceptions
+    
+    class InterestRateCheckTest(BaseTest):
+        """利率合规检测"""
+        test_id = 'CFC-T003'
+        test_name = '利率合规检测'
+        category = 'Credit Facility Creation'
+        severity = 'high'
+        description = '检测利率是否符合监管要求'
+        
+        def execute(self, data):
+            exceptions = []
+            max_rate = 0.24  # 最高年利率24%
+            
+            for record in data.get('relationship', []):
+                interest_rate = record.get('interest_rate', 0)
+                if isinstance(interest_rate, (int, float)) and interest_rate > max_rate:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('relationship_id', 'N/A'),
+                        field_name='interest_rate',
+                        actual_value=f"{interest_rate * 100}%",
+                        expected_value=f'<= {max_rate * 100}%',
+                        description=f"利率 {interest_rate * 100}% 超过监管上限"
+                    ))
+            
+            return exceptions
+    
+    class ExpiryDateValidationTest(BaseTest):
+        """到期日验证"""
+        test_id = 'CFC-T004'
+        test_name = '到期日验证'
+        category = 'Credit Facility Creation'
+        severity = 'medium'
+        description = '验证到期日是否合理'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data.get('relationship', []):
+                start_date = record.get('start_date')
+                expiry_date = record.get('expiry_date')
+                
+                if start_date and expiry_date:
+                    try:
+                        from datetime import datetime
+                        start = datetime.strptime(str(start_date), '%Y-%m-%d')
+                        expiry = datetime.strptime(str(expiry_date), '%Y-%m-%d')
+                        
+                        if expiry <= start:
+                            exceptions.append(self.create_exception(
+                                record_id=record.get('relationship_id', 'N/A'),
+                                field_name='expiry_date',
+                                actual_value=expiry_date,
+                                expected_value='> ' + start_date,
+                                description=f"到期日 {expiry_date} 早于或等于开始日期 {start_date}"
+                            ))
+                    except Exception:
+                        pass  # 日期格式错误
+            
+            return exceptions
+
+
+# ==================== Credit Facility Management 测试类 ====================
+
+class CreditFacilityManagementTests:
+    """Credit Facility Management 测试大类"""
+    
+    class HighUtilizationTest(BaseTest):
+        """高额度使用率检测"""
+        test_id = 'CFM-T001'
+        test_name = '高额度使用率检测'
+        category = 'Credit Facility Management'
+        severity = 'high'
+        description = '检测额度使用率超过阈值的情况'
+        
+        def execute(self, data):
+            exceptions = []
+            utilization_threshold = 90  # 90%
+            
+            for record in data.get('relationship', []):
+                outstanding = record.get('outstanding_balance', 0)
+                limit = record.get('credit_limit', 0)
+                
+                if isinstance(outstanding, (int, float)) and isinstance(limit, (int, float)) and limit > 0:
+                    utilization = (outstanding / limit) * 100
+                    if utilization > utilization_threshold:
+                        exceptions.append(self.create_exception(
+                            record_id=record.get('relationship_id', 'N/A'),
+                            field_name='utilization_rate',
+                            actual_value=f"{utilization:.1f}%",
+                            expected_value=f'<= {utilization_threshold}%',
+                            description=f"额度使用率 {utilization:.1f}% 超过阈值"
+                        ))
+            
+            return exceptions
+    
+    class ExpiryWarningTest(BaseTest):
+        """到期预警检测"""
+        test_id = 'CFM-T002'
+        test_name = '到期预警检测'
+        category = 'Credit Facility Management'
+        severity = 'medium'
+        description = '检测即将到期的授信产品'
+        
+        def execute(self, data):
+            exceptions = []
+            warning_days = 30  # 提前30天预警
+            
+            from datetime import datetime, timedelta
+            today = datetime.now().date()
+            warning_date = today + timedelta(days=warning_days)
+            
+            for record in data.get('relationship', []):
+                expiry_date = record.get('expiry_date')
+                if expiry_date:
+                    try:
+                        expiry = datetime.strptime(str(expiry_date), '%Y-%m-%d').date()
+                        if today <= expiry <= warning_date:
+                            days_left = (expiry - today).days
+                            exceptions.append(self.create_exception(
+                                record_id=record.get('relationship_id', 'N/A'),
+                                field_name='expiry_date',
+                                actual_value=expiry_date,
+                                expected_value=f'> {warning_date.strftime("%Y-%m-%d")}',
+                                description=f"授信产品将在 {days_left} 天后到期"
+                            ))
+                    except Exception:
+                        pass
+            
+            return exceptions
+    
+    class StatusChangeAuditTest(BaseTest):
+        """状态变更审计"""
+        test_id = 'CFM-T003'
+        test_name = '状态变更审计'
+        category = 'Credit Facility Management'
+        severity = 'medium'
+        description = '审计异常的状态变更'
+        
+        def execute(self, data):
+            exceptions = []
+            suspicious_changes = ['active_to_closed', 'suspended_to_active']
+            
+            for record in data.get('relationship', []):
+                status_change = record.get('status_change')
+                if status_change in suspicious_changes:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('relationship_id', 'N/A'),
+                        field_name='status_change',
+                        actual_value=status_change,
+                        expected_value='Normal status transition',
+                        description=f"检测到异常状态变更: {status_change}"
+                    ))
+            
+            return exceptions
+    
+    class BalanceAccuracyTest(BaseTest):
+        """余额准确性检测"""
+        test_id = 'CFM-T004'
+        test_name = '余额准确性检测'
+        category = 'Credit Facility Management'
+        severity = 'critical'
+        description = '检测余额数据的准确性'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data.get('relationship', []):
+                outstanding = record.get('outstanding_balance', 0)
+                disbursed = record.get('total_disbursed', 0)
+                repaid = record.get('total_repaid', 0)
+                
+                if isinstance(outstanding, (int, float)) and isinstance(disbursed, (int, float)) and isinstance(repaid, (int, float)):
+                    expected_outstanding = disbursed - repaid
+                    if abs(outstanding - expected_outstanding) > 0.01:  # 允许微小误差
+                        exceptions.append(self.create_exception(
+                            record_id=record.get('relationship_id', 'N/A'),
+                            field_name='outstanding_balance',
+                            actual_value=outstanding,
+                            expected_value=expected_outstanding,
+                            description=f"余额计算不一致: 实际 {outstanding}, 预期 {expected_outstanding}"
+                        ))
+            
+            return exceptions
+
+
+# ==================== Credit Oversight & Governance 测试类 ====================
+
+class CreditOversightGovernanceTests:
+    """Credit Oversight & Governance 测试大类"""
+    
+    class ConcentrationRiskTest(BaseTest):
+        """集中度风险检测"""
+        test_id = 'COG-T001'
+        test_name = '集中度风险检测'
+        category = 'Credit Oversight & Governance'
+        severity = 'critical'
+        description = '检测客户集中度是否超过阈值'
+        
+        def execute(self, data):
+            exceptions = []
+            concentration_limit = 0.3  # 30%
+            
+            # 计算总贷款金额
+            total_loan = sum(record.get('facility_amount', 0) for record in data.get('relationship', []))
+            
+            if total_loan > 0:
+                # 按客户分组计算集中度
+                customer_exposures = {}
+                for record in data.get('relationship', []):
+                    customer_id = record.get('customer_id', 'Unknown')
+                    customer_exposures[customer_id] = customer_exposures.get(customer_id, 0) + record.get('facility_amount', 0)
+                
+                for customer_id, exposure in customer_exposures.items():
+                    concentration = exposure / total_loan
+                    if concentration > concentration_limit:
+                        exceptions.append(self.create_exception(
+                            record_id=customer_id,
+                            field_name='concentration_ratio',
+                            actual_value=f"{concentration * 100:.1f}%",
+                            expected_value=f'<= {concentration_limit * 100}%',
+                            description=f"客户 {customer_id} 集中度 {concentration * 100:.1f}% 超过阈值"
+                        ))
+            
+            return exceptions
+    
+    class PolicyComplianceTest(BaseTest):
+        """政策合规检测"""
+        test_id = 'COG-T002'
+        test_name = '政策合规检测'
+        category = 'Credit Oversight & Governance'
+        severity = 'high'
+        description = '检测贷款是否符合内部政策'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data.get('relationship', []):
+                industry = record.get('industry', '')
+                max_limit_by_industry = {
+                    'Real Estate': 5000000,
+                    'Manufacturing': 3000000,
+                    'Services': 2000000
+                }
+                
+                max_limit = max_limit_by_industry.get(industry)
+                if max_limit:
+                    facility_amount = record.get('facility_amount', 0)
+                    if isinstance(facility_amount, (int, float)) and facility_amount > max_limit:
+                        exceptions.append(self.create_exception(
+                            record_id=record.get('relationship_id', 'N/A'),
+                            field_name='facility_amount',
+                            actual_value=facility_amount,
+                            expected_value=f'<= {max_limit} ({industry})',
+                            description=f"{industry}行业贷款 {facility_amount} 超过政策限额 {max_limit}"
+                        ))
+            
+            return exceptions
+    
+    class AuditTrailIntegrityTest(BaseTest):
+        """审计轨迹完整性"""
+        test_id = 'COG-T003'
+        test_name = '审计轨迹完整性'
+        category = 'Credit Oversight & Governance'
+        severity = 'high'
+        description = '检测审计日志是否完整'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data.get('relationship', []):
+                audit_trail = record.get('audit_trail_complete')
+                if audit_trail not in ['Yes', 'yes', True, 'Complete']:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('relationship_id', 'N/A'),
+                        field_name='audit_trail_complete',
+                        actual_value=str(audit_trail),
+                        expected_value='Yes',
+                        description="审计轨迹不完整"
+                    ))
+            
+            return exceptions
+    
+    class DataQualityValidationTest(BaseTest):
+        """数据质量验证"""
+        test_id = 'COG-T004'
+        test_name = '数据质量验证'
+        category = 'Credit Oversight & Governance'
+        severity = 'medium'
+        description = '验证关键数据字段的质量'
+        
+        def execute(self, data):
+            exceptions = []
+            critical_fields = ['customer_id', 'relationship_id', 'facility_amount', 'status']
+            
+            for record in data.get('relationship', []):
+                missing_fields = []
+                for field in critical_fields:
+                    value = record.get(field)
+                    if value is None or value == '' or str(value).strip() == '':
+                        missing_fields.append(field)
+                
+                if missing_fields:
+                    exceptions.append(self.create_exception(
+                        record_id=record.get('relationship_id', 'N/A'),
+                        field_name='data_quality',
+                        actual_value='Missing: ' + ', '.join(missing_fields),
+                        expected_value='All fields present',
+                        description=f"缺少关键字段: {', '.join(missing_fields)}"
+                    ))
+            
+            return exceptions
+
+
+# ==================== 测试注册器 ====================
+
+class TestRegistry:
+    """测试注册器 - 管理所有测试类"""
+    
+    @staticmethod
+    def get_all_tests():
+        """获取所有测试实例"""
+        tests = []
+        
+        # Credit Origination
+        tests.append(CreditOriginationTests.ApplicationAmountThresholdTest())
+        tests.append(CreditOriginationTests.QuickApprovalTest())
+        tests.append(CreditOriginationTests.CustomerRiskScoreTest())
+        tests.append(CreditOriginationTests.DocumentCompletenessTest())
+        
+        # Credit Facility Creation
+        tests.append(CreditFacilityCreationTests.FacilityLimitExceedTest())
+        tests.append(CreditFacilityCreationTests.FacilityTypeValidationTest())
+        tests.append(CreditFacilityCreationTests.InterestRateCheckTest())
+        tests.append(CreditFacilityCreationTests.ExpiryDateValidationTest())
+        
+        # Credit Facility Management
+        tests.append(CreditFacilityManagementTests.HighUtilizationTest())
+        tests.append(CreditFacilityManagementTests.ExpiryWarningTest())
+        tests.append(CreditFacilityManagementTests.StatusChangeAuditTest())
+        tests.append(CreditFacilityManagementTests.BalanceAccuracyTest())
+        
+        # Credit Oversight & Governance
+        tests.append(CreditOversightGovernanceTests.ConcentrationRiskTest())
+        tests.append(CreditOversightGovernanceTests.PolicyComplianceTest())
+        tests.append(CreditOversightGovernanceTests.AuditTrailIntegrityTest())
+        tests.append(CreditOversightGovernanceTests.DataQualityValidationTest())
+        
+        return tests
+    
+    @staticmethod
+    def get_tests_by_category(category):
+        """按类别获取测试"""
+        all_tests = TestRegistry.get_all_tests()
+        return [t for t in all_tests if t.category == category]
+    
+    @staticmethod
+    def get_test_by_id(test_id):
+        """按ID获取测试"""
+        all_tests = TestRegistry.get_all_tests()
+        for test in all_tests:
+            if test.test_id == test_id:
+                return test
+        return None
