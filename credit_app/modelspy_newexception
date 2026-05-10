@@ -1,0 +1,66 @@
+from django.db import models
+import uuid
+
+class ExceptionRecord(models.Model):
+    """异常记录模型"""
+    
+    SEVERITY_CHOICES = [
+        ('critical', 'Critical'),
+        ('high', 'High'),
+        ('medium', 'Medium'),
+        ('low', 'Low'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('investigating', 'Investigating'),
+        ('resolved', 'Resolved'),
+        ('false_positive', 'False Positive'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    test_id = models.CharField(max_length=50)
+    test_name = models.CharField(max_length=200, blank=True)
+    category = models.CharField(max_length=100, blank=True)
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    record_id = models.CharField(max_length=100)  # 关联的业务记录ID
+    field_name = models.CharField(max_length=100, blank=True)
+    expected_value = models.TextField(blank=True, null=True)
+    actual_value = models.TextField(blank=True, null=True)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'exception_records'
+        verbose_name = 'Exception Record'
+        verbose_name_plural = 'Exception Records'
+    
+    def __str__(self):
+        return f"{self.test_id} - {self.record_id}"
+
+class TestExecution(models.Model):
+    """测试执行记录模型"""
+    
+    STATUS_CHOICES = [
+        ('success', 'Success'),
+        ('failed', 'Failed'),
+        ('partial', 'Partial'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    test_id = models.CharField(max_length=50)
+    test_name = models.CharField(max_length=200)
+    execution_time = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    records_checked = models.IntegerField(default=0)
+    exceptions_found = models.IntegerField(default=0)
+    
+    class Meta:
+        db_table = 'test_executions'
+        verbose_name = 'Test Execution'
+        verbose_name_plural = 'Test Executions'
+    
+    def __str__(self):
+        return f"{self.test_id} - {self.execution_time}"
