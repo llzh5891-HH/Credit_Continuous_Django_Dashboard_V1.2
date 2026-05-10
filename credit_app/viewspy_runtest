@@ -8,31 +8,71 @@ import os
 # ========== 请替换以下路径 ==========
 PROCESS_LIBRARY_FILE_PATH = r'[替换为您的Process Library文件路径]'
 TEST_FILE_PATH = r'[替换为您的Test文件路径]'
+RELATIONSHIP_TABLE_PATH = r'[替换为relationship_level_mastertable.csv路径]'
+CUSTOMER_TABLE_PATH = r'[替换为customer_level_mastertable.csv路径]'
 # ===================================
 
-from .models import Alert, AlertRule
+from .models import Alert, AlertRule, ExceptionRecord
 from .tests import TestRegistry
 
-# ... 现有代码 ...
+def load_relationship_data():
+    """读取Relationship Level主数据表"""
+    print(f"\n=== 加载 Relationship Level 数据 ===")
+    if not os.path.exists(RELATIONSHIP_TABLE_PATH):
+        print(f"❌ 文件不存在: {RELATIONSHIP_TABLE_PATH}")
+        return []
+    
+    try:
+        df = pd.read_csv(RELATIONSHIP_TABLE_PATH)
+        print(f"✅ 成功读取，行数: {len(df)}, 列数: {len(df.columns)}")
+        print(f"列名: {df.columns.tolist()}")
+        return df.to_dict('records')
+    except Exception as e:
+        print(f"❌ 读取失败: {str(e)}")
+        return []
+
+def load_customer_data():
+    """读取Customer Level主数据表"""
+    print(f"\n=== 加载 Customer Level 数据 ===")
+    if not os.path.exists(CUSTOMER_TABLE_PATH):
+        print(f"❌ 文件不存在: {CUSTOMER_TABLE_PATH}")
+        return []
+    
+    try:
+        df = pd.read_csv(CUSTOMER_TABLE_PATH)
+        print(f"✅ 成功读取，行数: {len(df)}, 列数: {len(df.columns)}")
+        print(f"列名: {df.columns.tolist()}")
+        return df.to_dict('records')
+    except Exception as e:
+        print(f"❌ 读取失败: {str(e)}")
+        return []
 
 def run_tests(request):
     """执行所有测试并生成异常记录"""
     print("\n=== 执行测试 ===")
     
-    # 获取测试数据（从数据库或其他数据源）
-    # TODO: 替换为实际的数据获取逻辑
-    test_data = get_test_data()
+    # 加载数据
+    relationship_data = load_relationship_data()
+    customer_data = load_customer_data()
     
-    # 获取所有测试
+    # 打包数据供测试使用
+    test_data = {
+        'relationship': relationship_data,
+        'customer': customer_data
+    }
+    
+    # 获取所有测试并执行
     all_tests = TestRegistry.get_all_tests()
     all_exceptions = []
     
-    # 执行每个测试
     for test in all_tests:
         print(f"执行测试: {test.test_id} - {test.test_name}")
-        exceptions = test.execute(test_data)
-        all_exceptions.extend(exceptions)
-        print(f"  发现异常: {len(exceptions)} 条")
+        try:
+            exceptions = test.execute(test_data)
+            all_exceptions.extend(exceptions)
+            print(f"  ✓ 完成，发现异常: {len(exceptions)} 条")
+        except Exception as e:
+            print(f"  ✗ 执行失败: {str(e)}")
     
     print(f"\n测试完成，共发现 {len(all_exceptions)} 条异常")
     
@@ -45,24 +85,18 @@ def run_tests(request):
         'total_exceptions': len(all_exceptions)
     })
 
-def get_test_data():
-    """获取测试数据（需要实现）"""
-    # TODO: 从数据库查询需要测试的数据
-    # 示例返回格式
-    return []
-
 def save_exceptions(exceptions):
     """保存异常记录到数据库"""
-    from .models import ExceptionRecord
-    
     for exc in exceptions:
         ExceptionRecord.objects.create(
             test_id=exc['test_id'],
+            test_name=exc['test_name'],
+            category=exc['category'],
             severity=exc['severity'],
             record_id=exc['record_id'],
-            field_name=exc['field_name'],
-            actual_value=exc['actual_value'],
-            expected_value=exc['expected_value'],
+            field_name=exc.get('field_name', ''),
+            actual_value=exc.get('actual_value'),
+            expected_value=exc.get('expected_value'),
             description=exc['description']
         )
 
