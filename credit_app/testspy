@@ -1,0 +1,403 @@
+from abc import ABC, abstractmethod
+from datetime import datetime
+
+class BaseTest(ABC):
+    """测试基类"""
+    test_id = None
+    test_name = None
+    category = None
+    severity = None
+    description = None
+    
+    def __init__(self):
+        assert self.test_id, "test_id must be defined"
+        assert self.test_name, "test_name must be defined"
+        assert self.category, "category must be defined"
+        assert self.severity in ['critical', 'high', 'medium', 'low'], "Invalid severity"
+    
+    @abstractmethod
+    def execute(self, data):
+        """执行测试，返回异常列表"""
+        pass
+    
+    def create_exception(self, record_id, field_name, actual_value, expected_value=None, description=None):
+        """创建异常记录"""
+        return {
+            'test_id': self.test_id,
+            'test_name': self.test_name,
+            'category': self.category,
+            'severity': self.severity,
+            'record_id': record_id,
+            'field_name': field_name,
+            'actual_value': str(actual_value),
+            'expected_value': str(expected_value) if expected_value else None,
+            'description': description or f"Test {self.test_id} failed for record {record_id}",
+            'created_at': datetime.now().isoformat()
+        }
+
+
+# ==================== Credit Origination 测试类 ====================
+
+class CreditOriginationTests:
+    """Credit Origination 测试大类"""
+    
+    class ApplicationAmountThresholdTest(BaseTest):
+        """大额贷款申请检测"""
+        test_id = 'CO-T001'
+        test_name = '大额贷款申请检测'
+        category = 'Credit Origination'
+        severity = 'critical'
+        description = '检测超过阈值的大额贷款申请'
+        
+        def execute(self, data):
+            exceptions = []
+            threshold = 1000000  # 可配置阈值
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                # if record['amount'] > threshold:
+                #     exceptions.append(self.create_exception(...))
+                pass
+            
+            return exceptions
+    
+    class QuickApprovalTest(BaseTest):
+        """快速审批检测"""
+        test_id = 'CO-T002'
+        test_name = '快速审批检测'
+        category = 'Credit Origination'
+        severity = 'high'
+        description = '检测异常快速的审批流程'
+        
+        def execute(self, data):
+            exceptions = []
+            max_days = 1  # 可配置
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class CustomerRiskScoreTest(BaseTest):
+        """客户风险评分检测"""
+        test_id = 'CO-T003'
+        test_name = '客户风险评分检测'
+        category = 'Credit Origination'
+        severity = 'medium'
+        description = '检测高风险客户的贷款申请'
+        
+        def execute(self, data):
+            exceptions = []
+            risk_threshold = 70  # 可配置风险阈值
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class DocumentCompletenessTest(BaseTest):
+        """申请文件完整性检测"""
+        test_id = 'CO-T004'
+        test_name = '申请文件完整性检测'
+        category = 'Credit Origination'
+        severity = 'medium'
+        description = '检测申请文件是否完整'
+        
+        def execute(self, data):
+            exceptions = []
+            required_docs = ['id_card', 'income_proof', 'credit_report']
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+
+
+# ==================== Credit Facility Creation 测试类 ====================
+
+class CreditFacilityCreationTests:
+    """Credit Facility Creation 测试大类"""
+    
+    class FacilityLimitExceedTest(BaseTest):
+        """额度超限检测"""
+        test_id = 'CFC-T001'
+        test_name = '额度超限检测'
+        category = 'Credit Facility Creation'
+        severity = 'critical'
+        description = '检测超过客户授信额度的贷款发放'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                # if record['facility_amount'] > record['credit_limit']:
+                #     exceptions.append(self.create_exception(...))
+                pass
+            
+            return exceptions
+    
+    class FacilityTypeValidationTest(BaseTest):
+        """产品类型验证"""
+        test_id = 'CFC-T002'
+        test_name = '产品类型验证'
+        category = 'Credit Facility Creation'
+        severity = 'high'
+        description = '验证贷款产品类型是否合法'
+        
+        def execute(self, data):
+            exceptions = []
+            valid_types = ['Loan', 'Credit Line', 'Guarantee', 'LC', 'BD']
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class InterestRateCheckTest(BaseTest):
+        """利率合规检测"""
+        test_id = 'CFC-T003'
+        test_name = '利率合规检测'
+        category = 'Credit Facility Creation'
+        severity = 'high'
+        description = '检测利率是否符合监管要求'
+        
+        def execute(self, data):
+            exceptions = []
+            max_rate = 0.24  # 可配置最高利率
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class ExpiryDateValidationTest(BaseTest):
+        """到期日验证"""
+        test_id = 'CFC-T004'
+        test_name = '到期日验证'
+        category = 'Credit Facility Creation'
+        severity = 'medium'
+        description = '验证到期日是否合理'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+
+
+# ==================== Credit Facility Management 测试类 ====================
+
+class CreditFacilityManagementTests:
+    """Credit Facility Management 测试大类"""
+    
+    class HighUtilizationTest(BaseTest):
+        """高额度使用率检测"""
+        test_id = 'CFM-T001'
+        test_name = '高额度使用率检测'
+        category = 'Credit Facility Management'
+        severity = 'high'
+        description = '检测额度使用率超过阈值的情况'
+        
+        def execute(self, data):
+            exceptions = []
+            utilization_threshold = 90  # 可配置阈值(%)
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                # utilization = (record['outstanding'] / record['limit']) * 100
+                # if utilization > utilization_threshold:
+                #     exceptions.append(self.create_exception(...))
+                pass
+            
+            return exceptions
+    
+    class ExpiryWarningTest(BaseTest):
+        """到期预警检测"""
+        test_id = 'CFM-T002'
+        test_name = '到期预警检测'
+        category = 'Credit Facility Management'
+        severity = 'medium'
+        description = '检测即将到期的授信产品'
+        
+        def execute(self, data):
+            exceptions = []
+            warning_days = 30  # 提前预警天数
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class StatusChangeAuditTest(BaseTest):
+        """状态变更审计"""
+        test_id = 'CFM-T003'
+        test_name = '状态变更审计'
+        category = 'Credit Facility Management'
+        severity = 'medium'
+        description = '审计异常的状态变更'
+        
+        def execute(self, data):
+            exceptions = []
+            suspicious_changes = ['active_to_closed', 'suspended_to_active']
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class BalanceAccuracyTest(BaseTest):
+        """余额准确性检测"""
+        test_id = 'CFM-T004'
+        test_name = '余额准确性检测'
+        category = 'Credit Facility Management'
+        severity = 'critical'
+        description = '检测余额数据的准确性'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+
+
+# ==================== Credit Oversight & Governance 测试类 ====================
+
+class CreditOversightGovernanceTests:
+    """Credit Oversight & Governance 测试大类"""
+    
+    class ConcentrationRiskTest(BaseTest):
+        """集中度风险检测"""
+        test_id = 'COG-T001'
+        test_name = '集中度风险检测'
+        category = 'Credit Oversight & Governance'
+        severity = 'critical'
+        description = '检测客户集中度是否超过阈值'
+        
+        def execute(self, data):
+            exceptions = []
+            concentration_limit = 0.3  # 30% 阈值
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class PolicyComplianceTest(BaseTest):
+        """政策合规检测"""
+        test_id = 'COG-T002'
+        test_name = '政策合规检测'
+        category = 'Credit Oversight & Governance'
+        severity = 'high'
+        description = '检测贷款是否符合内部政策'
+        
+        def execute(self, data):
+            exceptions = []
+            policy_rules = []  # 政策规则列表
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class AuditTrailIntegrityTest(BaseTest):
+        """审计轨迹完整性"""
+        test_id = 'COG-T003'
+        test_name = '审计轨迹完整性'
+        category = 'Credit Oversight & Governance'
+        severity = 'high'
+        description = '检测审计日志是否完整'
+        
+        def execute(self, data):
+            exceptions = []
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+    
+    class DataQualityValidationTest(BaseTest):
+        """数据质量验证"""
+        test_id = 'COG-T004'
+        test_name = '数据质量验证'
+        category = 'Credit Oversight & Governance'
+        severity = 'medium'
+        description = '验证关键数据字段的质量'
+        
+        def execute(self, data):
+            exceptions = []
+            required_fields = ['customer_id', 'facility_id', 'amount', 'status']
+            
+            for record in data:
+                # TODO: 实现检测逻辑
+                pass
+            
+            return exceptions
+
+
+# ==================== 测试注册器 ====================
+
+class TestRegistry:
+    """测试注册器 - 管理所有测试类"""
+    
+    @staticmethod
+    def get_all_tests():
+        """获取所有测试实例"""
+        tests = []
+        
+        # Credit Origination
+        tests.append(CreditOriginationTests.ApplicationAmountThresholdTest())
+        tests.append(CreditOriginationTests.QuickApprovalTest())
+        tests.append(CreditOriginationTests.CustomerRiskScoreTest())
+        tests.append(CreditOriginationTests.DocumentCompletenessTest())
+        
+        # Credit Facility Creation
+        tests.append(CreditFacilityCreationTests.FacilityLimitExceedTest())
+        tests.append(CreditFacilityCreationTests.FacilityTypeValidationTest())
+        tests.append(CreditFacilityCreationTests.InterestRateCheckTest())
+        tests.append(CreditFacilityCreationTests.ExpiryDateValidationTest())
+        
+        # Credit Facility Management
+        tests.append(CreditFacilityManagementTests.HighUtilizationTest())
+        tests.append(CreditFacilityManagementTests.ExpiryWarningTest())
+        tests.append(CreditFacilityManagementTests.StatusChangeAuditTest())
+        tests.append(CreditFacilityManagementTests.BalanceAccuracyTest())
+        
+        # Credit Oversight & Governance
+        tests.append(CreditOversightGovernanceTests.ConcentrationRiskTest())
+        tests.append(CreditOversightGovernanceTests.PolicyComplianceTest())
+        tests.append(CreditOversightGovernanceTests.AuditTrailIntegrityTest())
+        tests.append(CreditOversightGovernanceTests.DataQualityValidationTest())
+        
+        return tests
+    
+    @staticmethod
+    def get_tests_by_category(category):
+        """按类别获取测试"""
+        all_tests = TestRegistry.get_all_tests()
+        return [t for t in all_tests if t.category == category]
+    
+    @staticmethod
+    def get_test_by_id(test_id):
+        """按ID获取测试"""
+        all_tests = TestRegistry.get_all_tests()
+        for test in all_tests:
+            if test.test_id == test_id:
+                return test
+        return None
