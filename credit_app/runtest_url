@@ -1,0 +1,9 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('alerts/', views.alert_dashboard, name='alert_dashboard'),
+    path('alerts/<int:alert_id>/update-status/', views.update_alert_status, name='update_alert_status'),
+    path('alerts/<int:alert_id>/investigate/', views.alert_investigate, name='alert_investigate'),
+    path('tests/run/', views.run_tests, name='run_tests'),  # 新增
+]
