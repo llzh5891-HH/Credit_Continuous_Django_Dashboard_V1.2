@@ -1,0 +1,69 @@
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.db.models import Count
+import pandas as pd
+import os
+
+# ========== 请替换以下路径 ==========
+PROCESS_LIBRARY_FILE_PATH = r'[替换为您的Process Library文件路径]'
+TEST_FILE_PATH = r'[替换为您的Test文件路径]'
+# ===================================
+
+from .models import Alert, AlertRule
+from .tests import TestRegistry
+
+# ... 现有代码 ...
+
+def run_tests(request):
+    """执行所有测试并生成异常记录"""
+    print("\n=== 执行测试 ===")
+    
+    # 获取测试数据（从数据库或其他数据源）
+    # TODO: 替换为实际的数据获取逻辑
+    test_data = get_test_data()
+    
+    # 获取所有测试
+    all_tests = TestRegistry.get_all_tests()
+    all_exceptions = []
+    
+    # 执行每个测试
+    for test in all_tests:
+        print(f"执行测试: {test.test_id} - {test.test_name}")
+        exceptions = test.execute(test_data)
+        all_exceptions.extend(exceptions)
+        print(f"  发现异常: {len(exceptions)} 条")
+    
+    print(f"\n测试完成，共发现 {len(all_exceptions)} 条异常")
+    
+    # 保存异常到数据库
+    save_exceptions(all_exceptions)
+    
+    return JsonResponse({
+        'success': True,
+        'total_tests': len(all_tests),
+        'total_exceptions': len(all_exceptions)
+    })
+
+def get_test_data():
+    """获取测试数据（需要实现）"""
+    # TODO: 从数据库查询需要测试的数据
+    # 示例返回格式
+    return []
+
+def save_exceptions(exceptions):
+    """保存异常记录到数据库"""
+    from .models import ExceptionRecord
+    
+    for exc in exceptions:
+        ExceptionRecord.objects.create(
+            test_id=exc['test_id'],
+            severity=exc['severity'],
+            record_id=exc['record_id'],
+            field_name=exc['field_name'],
+            actual_value=exc['actual_value'],
+            expected_value=exc['expected_value'],
+            description=exc['description']
+        )
+
+# ... 其他视图函数 ...
